@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AR Wedding Invitation</title>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+    .arjs-loader {
+      position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+      align-items: center; background: rgba(0,0,0,0.9); color: #fff; z-index: 9999; animation: fadeIn 0.8s ease forwards;
+    }
+    .arjs-loader div { font-size: 1.5em; margin-bottom: 20px; opacity: 0; animation: fadeInText 1s forwards 0.5s; }
+    .arjs-loader button {
+      padding: 12px 30px; border: none; border-radius: 25px; background: #fff; color: #000; font-size: 1em;
+      cursor: pointer; opacity: 0; animation: fadeInText 1s forwards 1s; transition: transform 0.3s, background 0.3s, color 0.3s;
+    }
+    .arjs-loader button:hover { transform: scale(1.1); background: #000; color: #fff; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeInText { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-out { animation: fadeOut 0.8s forwards; }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+  </style>
+</head>
+<body>
+
+  <!-- Loader overlay -->
+  <div class="arjs-loader">
+    <div>🎉 Open Wedding Invitation</div>
+    <button id="startBtn">Start AR View</button>
+  </div>
+
+  <a-scene vr-mode-ui="enabled: false" embedded renderer="antialias: true; logarithmicDepthBuffer: true;"
+           arjs="sourceType: webcam; debugUIEnabled: false;">
+
+    <a-assets>
+      <video id="myVideo" src="video.mp4" preload="auto" loop playsinline webkit-playsinline></video>
+    </a-assets>
+
+    <!-- Video plane always in front of camera, smaller and slightly farther -->
+    <a-entity id="videoGroup" visible="false" position="0 0 -1.5">
+      <a-plane id="videoPlane" src="#myVideo" width="0.30" height="0.5" material="shader: flat; side: double; opacity: 0;"></a-plane>
+    </a-entity>
+
+    <!-- AR camera -->
+    <a-entity camera look-controls position="0 0 0"></a-entity>
+  </a-scene>
+
+  <script>
+    const loader = document.querySelector('.arjs-loader');
+    const startBtn = document.getElementById('startBtn');
+    const video = document.getElementById('myVideo');
+    const videoGroup = document.getElementById('videoGroup');
+    const videoPlane = document.getElementById('videoPlane');
+
+    startBtn.addEventListener('click', () => {
+      loader.classList.add('fade-out');           // Fade out loader
+      videoGroup.setAttribute('visible', true);  // Show video
+      video.muted = false;
+      video.play().catch(() => alert('⚠️ Tap screen to start video.'));
+
+      // Smooth fade-in for video
+      let opacity = 0;
+      const fadeInterval = setInterval(() => {
+        opacity += 0.02;
+        if (opacity >= 1) {
+          opacity = 1;
+          clearInterval(fadeInterval);
+        }
+        videoPlane.setAttribute('material', 'opacity', opacity);
+      }, 20);
+    });
+
+    // Make video always face camera and move with it
+    AFRAME.registerComponent('follow-camera', {
+      tick: function () {
+        const camera = document.querySelector('[camera]');
+        if (camera) {
+          const camPos = camera.object3D.position;
+          const camRot = camera.object3D.rotation;
+          this.el.object3D.position.set(camPos.x, camPos.y, camPos.z - 1.5); // keep slightly farther
+          this.el.object3D.rotation.set(camRot.x, camRot.y, camRot.z);
+        }
+      }
+    });
+
+    videoGroup.setAttribute('follow-camera', '');
+  </script>
+</body>
+</html>
